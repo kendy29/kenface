@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'package:faceken/Screens/Login.dart';
+import 'package:flutter_neumorphic/flutter_neumorphic.dart';
 import 'package:google_ml_vision/google_ml_vision.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'detector_painters.dart';
 import 'utils.dart';
@@ -26,9 +27,28 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      themeMode: ThemeMode.light,
-      theme: ThemeData(brightness: Brightness.light),
-      home: MyHomePage(),
+      home: NeumorphicTheme(
+        themeMode: ThemeMode.light, //or dark / system
+        darkTheme: const NeumorphicThemeData(
+          baseColor: Color(0xff333333),
+          accentColor: Colors.green,
+          lightSource: LightSource.topLeft,
+          depth: 4,
+          intensity: 0.3,
+        ),
+        theme: const NeumorphicThemeData(
+          baseColor: Color(0xffDDDDDD),
+          accentColor: Colors.cyan,
+          lightSource: LightSource.topLeft,
+          depth: 6,
+          intensity: 0.5,
+        ),
+        child:  Material(
+          child: NeumorphicBackground(
+            child: Login(),
+          ),
+        ),
+      ),
       title: "Face Recognition",
       debugShowCheckedModeBanner: false,
     );
@@ -36,6 +56,8 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
+  const MyHomePage({Key? key}) : super(key: key);
+
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -93,8 +115,9 @@ class _MyHomePageState extends State<MyHomePage> {
     tempDir = await getApplicationDocumentsDirectory();
     String _embPath = tempDir!.path + '/emb.json';
     jsonFile = File(_embPath);
-    if (jsonFile!.existsSync())
+    if (jsonFile!.existsSync()) {
       data = json.decode(jsonFile!.readAsStringSync());
+    }
 
     _camera!.startImageStream((CameraImage image) {
       if (_camera != null) {
@@ -108,10 +131,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 imageRotation: description.sensorOrientation)
             .then(
           (dynamic result) async {
-            if (result.length == 0)
+            if (result.length == 0) {
               _faceFound = false;
-            else
+            } else {
               _faceFound = true;
+            }
             Face _face;
             imglib.Image convertedImage =
                 _convertCameraImage(image, _direction);
@@ -147,11 +171,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<dynamic> Function(GoogleVisionImage visionImage)
       _getDetectionMethod() {
-    final faceDetector = GoogleVision.instance.faceDetector(
-      const FaceDetectorOptions(
-        mode: FaceDetectorMode.accurate,
-      ),
-    );
     return _faceDetector.processImage;
   }
 
@@ -203,6 +222,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     await _camera!.stopImageStream();
     await _camera!.dispose();
+    _faceDetector.close();
 
     setState(() {
       _camera = null;
@@ -210,31 +230,36 @@ class _MyHomePageState extends State<MyHomePage> {
 
     _initializeCamera();
   }
-
+@override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    _faceDetector.close();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Face recognition'),
-        actions: <Widget>[
-          PopupMenuButton<Choice>(
-            onSelected: (Choice result) {
-              if (result == Choice.delete)
-                _resetFile();
-              else
-                _viewLabels();
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<Choice>>[
-              const PopupMenuItem<Choice>(
-                child: Text('View Saved Faces'),
-                value: Choice.view,
-              ),
-              const PopupMenuItem<Choice>(
-                child: Text('Remove all faces'),
-                value: Choice.delete,
-              )
-            ],
+        backgroundColor: const Color(0xffDDDDDD),
+        title: NeumorphicText(
+          'Face recognition',
+          style: const NeumorphicStyle(
+            depth: 4, //customize depth here
+            color: Colors.white, //customize color here
           ),
+          textStyle: NeumorphicTextStyle(
+            fontSize: 18, //customize size here
+            // AND others usual text style properties (fontFamily, fontWeight, ...)
+          ),
+        ),
+        actions: <Widget>[
+          IconButton(
+              onPressed: () {
+                _resetFile();
+                Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => Login()));
+              },
+              icon: const Icon(Icons.exit_to_app, color: Colors.white))
         ],
       ),
       body: _buildImage(),
@@ -242,13 +267,18 @@ class _MyHomePageState extends State<MyHomePage> {
           Column(mainAxisAlignment: MainAxisAlignment.end, children: [
         FloatingActionButton(
           backgroundColor: (_faceFound) ? Colors.blue : Colors.blueGrey,
-          child: Icon(Icons.add),
+          child: const Icon(Icons.add),
           onPressed: () {
-            if (_faceFound) _addLabel();
+            if (_faceFound) {
+              data['Kandy_software'] = e1;
+              log('data : $data');
+              jsonFile!.writeAsStringSync(json.encode(data));
+              _initializeCamera();
+            }
           },
           heroTag: null,
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         FloatingActionButton(
@@ -332,9 +362,9 @@ class _MyHomePageState extends State<MyHomePage> {
     });
     String name;
     var alert = AlertDialog(
-      title: Text("Saved Faces"),
+      title: const Text("Saved Faces"),
       content: ListView.builder(
-          padding: EdgeInsets.all(2),
+          padding: const EdgeInsets.all(2),
           itemCount: data.length,
           itemBuilder: (BuildContext context, int index) {
             name = data.keys.elementAt(index);
@@ -349,16 +379,16 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-                Padding(
+                const Padding(
                   padding: EdgeInsets.all(2),
                 ),
-                Divider(),
+                const Divider(),
               ],
             );
           }),
       actions: <Widget>[
         FlatButton(
-          child: Text("OK"),
+          child: const Text("OK"),
           onPressed: () {
             _initializeCamera();
             Navigator.pop(context);
@@ -378,7 +408,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _camera = null;
     });
     var alert = AlertDialog(
-      title: Text("Add Face"),
+      title: const Text("Add Face"),
       content: Row(
         children: <Widget>[
           Expanded(
@@ -386,21 +416,21 @@ class _MyHomePageState extends State<MyHomePage> {
               controller: _name,
               autofocus: true,
               decoration:
-                  InputDecoration(labelText: "Name", icon: Icon(Icons.face)),
+                  const InputDecoration(labelText: "Name", icon: Icon(Icons.face)),
             ),
           )
         ],
       ),
       actions: <Widget>[
         FlatButton(
-            child: Text("Save"),
+            child: const Text("Save"),
             onPressed: () {
               _handle(_name.text.toUpperCase());
               _name.clear();
               Navigator.pop(context);
             }),
         FlatButton(
-          child: Text("Cancel"),
+          child: const Text("Cancel"),
           onPressed: () {
             _initializeCamera();
             Navigator.pop(context);
@@ -415,10 +445,5 @@ class _MyHomePageState extends State<MyHomePage> {
         });
   }
 
-  void _handle(String text) {
-    data[text] = e1;
-    log('data : $data');
-    jsonFile!.writeAsStringSync(json.encode(data));
-    _initializeCamera();
-  }
+  void _handle(String text) {}
 }
